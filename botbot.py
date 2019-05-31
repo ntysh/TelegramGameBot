@@ -3,50 +3,105 @@ import parser
 from telebot import apihelper
 from imageai.Detection import ObjectDetection
 import os
+import markovify
 
 #main variables
 TOKEN = "838747096:AAH1CHU_bdf-Lb8V_J18tt6ad9dXV4GhSb0"
 bot = telebot.TeleBot(TOKEN)
 
-apihelper.proxy = {'https':'socks5h://dante:hrenota@31.14.131.25:7777'}
+apihelper.proxy = {'https':'socks5://dante:hrenota@31.14.131.25:7777'}
+
+
+with open("/Users/tysh/Documents/newnormal/motifs_list.txt") as f:
+    text = f.read()
+
+# Build the model.
+text_model = markovify.Text(text,state_size=1)
+
+
+
+        
+def continue_sentence(beginning):
+	print(beginning)
+	return text_model.make_sentence_with_start(beginning)
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-   bot.reply_to(message, "You are added to the game. Send me your found objects to DEFINE.")
+   bot.reply_to(message, "You've been added to the Game. Send me your found objects to DEFINE or start a story.")
+
+@bot.message_handler(commands=['story'])
+def send_welcome(message):
+    chat_id = message.chat.id
+    bot.reply_to(message, "Let me tell you a story.")
+    story = ''
+    for i in range(5):
+        story += text_model.make_sentence() + " " 
+    bot.send_message(chat_id, story)
+
+
 
 @bot.message_handler(content_types=['text'])
 def text_handler(message):
     text = message.text.lower()
     chat_id = message.chat.id
-    if "game" in text or "Game" in text:
-        bot.send_message(chat_id, 'Too early to know.')
-    elif text == "play":
-        bot.send_message(chat_id, 'Count to five. Ha-ha-ha.')
-    else:
-        bot.send_message(chat_id, 'Give me an object.')
+    try:
+    	answer = continue_sentence(text.split(' ')[0])
+    	if not answer: raise RuntimeError
+    except:
+    	answer = text_model.make_sentence()
+    bot.send_message(chat_id, answer)
+    
+#    if "game" in text:
+#        bot.send_message(chat_id, 'You can understand the Game only by playing.')
+#    else:
+#        bot.send_message(chat_id, 'Send me a photo or start a story by typing a command \"/play\".')
+
+  
+    
+
 
 @bot.message_handler(content_types=['photo'])
-def handle_docs_photo(message):    
+def handle_docs_photo(message): 
+	chat_id = message.chat.id   
 	try: 
 		file_info = bot.get_file(message.photo[len(message.photo)-1].file_id)
 		downloaded_file = bot.download_file(file_info.file_path)
 		src='/Users/tysh/Documents/newnormal/ImageAI/'+file_info.file_path;
 		with open(src, 'wb') as new_file:
 			new_file.write(downloaded_file)
-		bot.reply_to(message,"Getting you some definitions!") 
+		#bot.reply_to(message,"Getting you some definitions!")
+		bot.reply_to(message,"Let me think.")
 		execution_path = os.getcwd()
 		detector = ObjectDetection()
 		detector.setModelTypeAsRetinaNet()
 		detector.setModelPath( os.path.join(execution_path , "resnet50_coco_best_v2.0.1.h5"))
 		detector.loadModel()
 		detections = detector.detectObjectsFromImage(input_image=os.path.join(execution_path , file_info.file_path), output_image_path=os.path.join(execution_path , file_info.file_path + "imagenew.jpg"))
-
+		firstIteration = True
 		for eachObject in detections:
-			bot.reply_to(message, "I think it's a "+ eachObject["name"])
+			if firstIteration:
+				answer = "Once upon a time, there lived a nice "+ eachObject["name"] +'.'
+				firstIteration = False
+			else:
+				answer = "Then they saw a scary "+ eachObject["name"] +'.'
+			bot.reply_to(message,answer)
+			#bot.reply_to(message, "I think it's a "+ eachObject["name"])
+			sent1 = continue_sentence(eachObject["name"])
+			bot.send_message(chat_id, sent1)
+			sent2 = continue_sentence(sent1.split(' ')[-1].strip('.'))
+			bot.send_message(chat_id, sent2)
+	#		sent3 = continue_sentence(sent2[-1])
+	#		bot.send_message(chat_id, sent3)
+		bot.send_message(chat_id, "What happened then?")
 	except Exception as e:
-		bot.reply_to(message,"THIS IS NOT AN OBJECT." ) 
-
+		#bot.reply_to(message,"THIS IS NOT AN OBJECT." )
+		bot.reply_to(message,"I know another story.")
+		story = ''
+		for i in range(3):
+			story += text_model.make_sentence() + " " 
+		bot.send_message(chat_id, story)
+		bot.send_message(chat_id, "What happened then?") 
 @bot.message_handler(func=lambda m: True)
 def echo_all(message):
-   bot.reply_to(message, message.text)
+    bot.reply_to(message, message.text)
 bot.polling()
