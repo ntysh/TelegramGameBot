@@ -9,7 +9,7 @@ import markovify
 TOKEN = "838747096:AAH1CHU_bdf-Lb8V_J18tt6ad9dXV4GhSb0"
 bot = telebot.TeleBot(TOKEN)
 
-apihelper.proxy = {'https':'socks5://dante:hrenota@31.14.131.25:7777'}
+#apihelper.proxy = {'https':'socks5://dante:hrenota@31.14.131.25:7777'}
 
 
 with open("models/motifs_list.txt") as f:
