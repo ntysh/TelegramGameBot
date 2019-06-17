@@ -110,8 +110,10 @@ class Station2(Station):
 
 def load_json(filename):
     import json
-    with open(filename, "r") as jsondata:
-        data = json.load(jsondata)
+    import requests 
+    jsondata = requests.get(filename)
+    #with open(filename, "r") as jsondata:
+    data = json.load(jsondata)
     lines = {}
     for d in data:
         ln = d["line"]

@@ -19,7 +19,7 @@ from threading import Thread
 
 # game logic
 import game
-lines = game.load_json("stations.js")
+lines = game.load_json("https://github.com/agershun/mosmetro/blob/master/step1/stations.js")
 strt_room = lines["1"]["Kropotkinskaya"]
 curr_room = None
 stations = [r for l in lines.values() for r in l.rooms]
@@ -151,7 +151,7 @@ def askLibraryInside(message):
         bot.register_next_step_handler(msg, text_handler)         
         return
 
-#@bot.message_handler(content_types=['text'])
+@bot.message_handler(content_types=['text'])
 def text_handler(message):
     bot.reply_to(message, 'I know what you\'re talking about.')
     text = message.text.lower()
