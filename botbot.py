@@ -1,7 +1,14 @@
+# telegram
 import telebot
 import parser
 from telebot import apihelper, types
 
+TOKEN = '838747096:AAH1CHU_bdf-Lb8V_J18tt6ad9dXV4GhSb0'
+#TOKEN = input("Enter token: ").strip("\n")
+bot = telebot.TeleBot(TOKEN)
+apihelper.proxy = {'https':'socks5://dante:hrenota@31.14.131.25:7777'}
+
+# ai
 #from imageai.Detection import ObjectDetection
 import os, sys
 #import markovify
@@ -10,13 +17,23 @@ from interactive_conditional_samples import run_model
 #python src/interactive_conditional_samples.py 
 from threading import Thread
 
-# telegram params
-TOKEN = ""
-bot = telebot.TeleBot(TOKEN)
+# game logic
+import game
+lines = game.load_json("stations.js")
+strt_room = lines["1"]["Kropotkinskaya"]
+curr_room = None
+stations = [r for l in lines.values() for r in l.rooms]
+game.load_text_objects("artifacts.txt", stations)
+game.load_img_objects("image_artifacts", stations)
 
-apihelper.proxy = {'https':'socks5://dante:hrenota@31.14.131.25:7777'}
+def addButtons(*button_names):
+    source_markup = types.ReplyKeyboardMarkup(row_width=3, resize_keyboard=True)
+    btns = []
+    for bn in button_names: btns.append(types.KeyboardButton(bn))
+    source_markup.add(*btns)
+    return source_markup
 
-
+"""
 source_markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
 source_markup_btn1 = types.KeyboardButton('Park Kultury')
 source_markup_btn2 = types.KeyboardButton('Biblioteka imeni Lenina')
@@ -34,6 +51,8 @@ source_markup3_btn1 = types.KeyboardButton('Read the newspapers')
 source_markup3_btn2 = types.KeyboardButton('Read the Soviet archives')
 source_markup3_btn3 = types.KeyboardButton('Discuss the stories with an odd visitor')
 source_markup3.add(source_markup3_btn1, source_markup3_btn2,source_markup3_btn3)
+"""
+
 
 class Task():
     isRunning = False
@@ -52,8 +71,8 @@ task = Task()
 #text_model = markovify.Text(text,state_size=2)
 
 #load gpt2 model
-tfsession, interact_model = run_model()
-print('gpt2 model is loaded')
+#tfsession, interact_model = run_model()
+#print('gpt2 model is loaded')
 
 execution_path = os.getcwd()
 
@@ -67,44 +86,54 @@ def continue_sentence(beginning):
     print(beginning)
     return text_model.make_sentence_with_start(beginning)
 
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
 #   bot.reply_to(message, "You've been added to the Game. Send me your found objects to DEFINE or start a story.")
-   bot.reply_to(message, "You've been added to the Game. You're exploring Moscow Metro system and its secrets. Type \"/metro\" to enter the underground.")
+   bot.reply_to(message, "You've been added to the Game. Type \"/metro\" to enter the underground.")
 
 @bot.message_handler(commands=['metro'])
 def start_handler(message):
-    if not task.isRunning:
-        chat_id = message.chat.id
-        msg = bot.send_message(chat_id, 'You\'re entering the Kropotkinskaya metro station. Where to go?', reply_markup=source_markup)
-        bot.register_next_step_handler(msg, askStation)
-        task.isRunning = True
+    ans = "You're exploring Moscow Metro system and its secrets. You can travel to any station on the current line or transfer to other lines on the hub stations. The artifacts that you\'re collecting can drive you even further."
+    bot.reply_to(message, ans)
+    ans = enterRoom(strt_room)
+    msg = bot.send_message(message.chat.id, ans, reply_markup=addButtons(*curr_room.getActions()))
+    bot.register_next_step_handler(msg, gameHandler)
 
-def askStation(message):
+def enterRoom(new_room):
+    global curr_room
+    curr_room = new_room
+    return curr_room.get_description()
+    
+def checkWordsInText(word_list, text):
+    for w in word_list:
+        if w in text: return w
+    else:
+        return False
+
+def gameHandler(message):
     chat_id = message.chat.id
-    text = message.text
-    if 'Kropotkinskaya' in text:
-        msg = bot.send_message(chat_id, 'You\'re at Kropotkinskaya metro station. You see an information stand and some artifact. Stay to examine or go to the neighbour stations.', reply_markup=source_markup2)
-        bot.register_next_step_handler(msg, askKropotkinskaya) 
-    elif 'Biblioteka imeni Lenina' in text:
-        msg = bot.send_message(chat_id, 'You\'re at Biblioteka imeni Lenina metro station. Stay to examine, go to the neighbour stations or visit the library.')
-        bot.register_next_step_handler(msg, askLibrary)         
-        return     
+    text = message.text 
+    
+    imgs, texts = [], []
+    w = checkWordsInText(curr_room.keys(), text)
+    if w:
+        ans = enterRoom(curr_room[w])
+    elif text in curr_room.getActions():
+        ans, imgs, texts = curr_room.makeAction(text)
+        #ans.extend(a)
+        #img.extend(i)
+    else:
+        ans = 'You can travel to any station on the current line or transfer to other lines on the hub stations.'
+    
+    msg = bot.send_message(chat_id, ans, reply_markup=addButtons(*curr_room.getActions()))
+    for img in imgs:
+        with open(img, "rb") as img_bin:
+            bot.send_photo(chat_id, img_bin)
+    for txt in texts:
+        bot.send_message(chat_id, txt)
+    bot.register_next_step_handler(msg, gameHandler)
 
-def askKropotkinskaya(message):
-    chat_id = message.chat.id
-    text = message.text
-    if 'info' in text:
-        msg = bot.send_message(chat_id, 'The station was originally planned to serve the enormous Palace of the Soviets (Dvorets Sovetov), which was to rise nearby on the former site of the Cathedral of Christ the Saviour. Kropotkinskaya was therefore designed to be the largest and grandest station on the first line. However, the  Palace of the Soviets (Dvorets Sovetov) project was cancelled by Nikita Khrushchev in 1953, leaving the Metro station as the only part of the complex that was actually built.', reply_markup=source_markup2)
-        bot.register_next_step_handler(msg, askStation) 
-    elif 'artifact' in text:
-        msg = bot.send_message(chat_id, 'It is a story about the Dark Driver. The legend has it, that in the 1980’s a train went up in flames on the orange Kaluzhsko–Rizhskaya line. Without wasting any time, the driver of the train threw himself in the fire to save as many passengers as he could. Eventually, the man managed to get everyone out of the burning car but died later on in a hospital because of severe thermal injuries. The superiors blamed the incident on him and his supposed lack of professional qualifications. Up to this day, the enraged ghost appeared in the tunnels in search of revenge.', reply_markup=source_markup2)
-        msg = bot.send_message(chat_id, 'Where to go next?',reply_markup=source_markup)
-        bot.register_next_step_handler(msg, askStation)         
-        return
-
-
-Biblioteka_artifact = 'It is a note from a Soviet diary dated year 1988. It says: "At 18.00 (I was leaving the metro station "Biblioteka im. Lenina") I saw a demonstration of refusers-Jews. A man of forty, everything is quite calculated - posters, types of people, texts in Russian and English, but something in this group of people who courageously stood in a crowd hostile to them (however, they got used to it, no one particularly paid attention) painfully miserable. Are there any secrets or circumstances to torture people! I cried. Yes ... I have not had tears for such a long time. Tears were joyful. It means alive, the soul has not yet become hardened.'
 
 def askLibrary(message):
     chat_id = message.chat.id
@@ -139,12 +168,9 @@ def text_handler(message):
 #    t.start()
     #bot.register_next_step_handler(msg, text_handler)
     
-#    if "game" in text:
-#        bot.send_message(chat_id, 'You can understand the Game only by playing.')
-#    else:
-#        bot.send_message(chat_id, 'Send me a photo or start a story by typing a command \"/play\".')
 
-@bot.message_handler(content_types=['photo'])
+
+#@bot.message_handler(content_types=['photo'])
 def handle_docs_photo(message): 
     try:
         chat_id = message.chat.id    
@@ -160,8 +186,6 @@ def handle_docs_photo(message):
         detector.setModelTypeAsRetinaNet()
         detector.setModelPath("models/resnet50_coco_best_v2.0.1.h5")
         detector.loadModel()
-    #   print(imagepath)
-    #   print(detector)
         detections = detector.detectObjectsFromImage(input_image=imagepath, output_image_path=imagepath+".new.jpg")
         firstIteration = True
         toldStoryOnAnyObject = False
@@ -185,8 +209,6 @@ def handle_docs_photo(message):
                 bot.send_message(chat_id, sent2)
             except:
                 pass    
-    #       sent3 = continue_sentence(sent2[-1])
-    #       bot.send_message(chat_id, sent3)
         if not detections or not toldStoryOnAnyObject:
             if not detections:
                 #bot.reply_to(message,"THIS IS NOT AN OBJECT." )
