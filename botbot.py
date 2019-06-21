@@ -19,12 +19,15 @@ from threading import Thread
 
 # game logic
 import game
-lines = game.load_json("https://github.com/agershun/mosmetro/blob/master/step1/stations.js")
-strt_room = lines["1"]["Kropotkinskaya"]
-curr_room = None
-stations = [r for l in lines.values() for r in l.rooms]
-game.load_text_objects("artifacts.txt", stations)
-game.load_img_objects("image_artifacts", stations)
+
+g = game.Game()
+g.load_text_objects("artifacts.txt")
+g.load_img_objects("image_artifacts")
+g.load_json("stations.js")
+#lines = game.load_json("https://github.com/agershun/mosmetro/blob/master/step1/stations.js")
+g.load_names("names.txt")
+g.generate_npcs()
+
 
 def addButtons(*button_names):
     source_markup = types.ReplyKeyboardMarkup(row_width=3, resize_keyboard=True)
@@ -51,7 +54,7 @@ source_markup3_btn1 = types.KeyboardButton('Read the newspapers')
 source_markup3_btn2 = types.KeyboardButton('Read the Soviet archives')
 source_markup3_btn3 = types.KeyboardButton('Discuss the stories with an odd visitor')
 source_markup3.add(source_markup3_btn1, source_markup3_btn2,source_markup3_btn3)
-"""
+
 
 
 class Task():
@@ -61,7 +64,7 @@ class Task():
     def __init__(self):
         return
 task = Task()
-
+"""
 
 # motifs dataset
 #with open("models/motifs_list.txt") as f:
@@ -71,8 +74,8 @@ task = Task()
 #text_model = markovify.Text(text,state_size=2)
 
 #load gpt2 model
-#tfsession, interact_model = run_model()
-#print('gpt2 model is loaded')
+tfsession, interact_model = run_model()
+print('gpt2 model is loaded')
 
 execution_path = os.getcwd()
 
@@ -94,45 +97,39 @@ def send_welcome(message):
 
 @bot.message_handler(commands=['metro'])
 def start_handler(message):
-    ans = "You're exploring Moscow Metro system and its secrets. You can travel to any station on the current line or transfer to other lines on the hub stations. The artifacts that you\'re collecting can drive you even further."
+    ans = g.welcomeMessage()
     bot.reply_to(message, ans)
-    ans = enterRoom(strt_room)
-    msg = bot.send_message(message.chat.id, ans, reply_markup=addButtons(*curr_room.getActions()))
+    ans = g.start()
+    msg = bot.send_message(message.chat.id, ans, reply_markup=addButtons(*g.getActions()))
     bot.register_next_step_handler(msg, gameHandler)
-
-def enterRoom(new_room):
-    global curr_room
-    curr_room = new_room
-    return curr_room.get_description()
-    
-def checkWordsInText(word_list, text):
-    for w in word_list:
-        if w in text: return w
-    else:
-        return False
 
 def gameHandler(message):
     chat_id = message.chat.id
     text = message.text 
     
-    imgs, texts = [], []
-    w = checkWordsInText(curr_room.keys(), text)
-    if w:
-        ans = enterRoom(curr_room[w])
-    elif text in curr_room.getActions():
-        ans, imgs, texts = curr_room.makeAction(text)
-        #ans.extend(a)
-        #img.extend(i)
+    # getting game answer
+    ans, objects, speechs = g.makeAction(text)
+                
+    # sending game answer
+    msg = bot.send_message(chat_id, ans, reply_markup=addButtons(*g.getActions()))
+    for speech in speechs:
+        #txt = "**"+speech[0]+"**"+": __"+speech[1]+"__"
+        txt = "**{0}**: __{1}__".format(*speech)
+        bot.send_message(chat_id, txt, parse_mode="markdown")
+    for obj in objects:
+        if 'image' in obj.keys():
+            img = obj['image']
+            with open(img, "rb") as img_bin:
+                bot.send_photo(chat_id, img_bin)
+        if 'text' in obj.keys():
+            txt = obj['text']
+            bot.send_message(chat_id, txt)
+
+    # new step
+    if g.dialogue:
+        bot.register_next_step_handler(msg, dialogue_handler)
     else:
-        ans = 'You can travel to any station on the current line or transfer to other lines on the hub stations.'
-    
-    msg = bot.send_message(chat_id, ans, reply_markup=addButtons(*curr_room.getActions()))
-    for img in imgs:
-        with open(img, "rb") as img_bin:
-            bot.send_photo(chat_id, img_bin)
-    for txt in texts:
-        bot.send_message(chat_id, txt)
-    bot.register_next_step_handler(msg, gameHandler)
+        bot.register_next_step_handler(msg, gameHandler)
 
 
 def askLibrary(message):
@@ -151,10 +148,10 @@ def askLibraryInside(message):
         bot.register_next_step_handler(msg, text_handler)         
         return
 
-@bot.message_handler(content_types=['text'])
-def text_handler(message):
-    bot.reply_to(message, 'I know what you\'re talking about.')
-    text = message.text.lower()
+#@bot.message_handler(content_types=['text'])
+def dialogue_handler(message):
+    bot.reply_to(message, 'I\'m going to the archive. Wait for me.')
+    text = message.text #.lower()
     chat_id = message.chat.id
     #try:
         #answer = continue_sentence(text.split(' ')[0])
