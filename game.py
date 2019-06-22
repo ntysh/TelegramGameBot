@@ -280,7 +280,7 @@ class NPC:
         return welcome #+ " " + info
     
     def objectInfo(self):
-        text = "I have something for you." if self.objects else "I don't have anything for you."
+        text = "\"I have something for you.\"" if self.objects else "I don't have anything for you."
         return (text, self.objects[-1] if self.objects else None)
     
     def addObject(self, obj):
@@ -300,5 +300,5 @@ class Player:
     
     def isEnoughCommunication(self):
         #return True
-        return len(self.diary) >= 3
+        return len(self.diary) >= 2
     
