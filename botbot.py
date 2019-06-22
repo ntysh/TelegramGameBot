@@ -21,7 +21,7 @@ import game
 
 g = game.Game()
 g.load_text_objects("artifacts.txt")
-g.load_img_objects("image_artifacts")
+#g.load_img_objects("image_artifacts")
 g.load_json("stations.js")
 #lines = game.load_json("https://github.com/agershun/mosmetro/blob/master/step1/stations.js")
 g.load_names("names.txt")
