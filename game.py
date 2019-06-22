@@ -299,6 +299,6 @@ class Player:
         self.diary.append(npc)
     
     def isEnoughCommunication(self):
-        return True
-        #return len(self.diary) >= 3
+        #return True
+        return len(self.diary) >= 3
     
