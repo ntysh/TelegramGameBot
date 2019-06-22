@@ -6,14 +6,13 @@ from telebot import apihelper, types
 TOKEN = '838747096:AAH1CHU_bdf-Lb8V_J18tt6ad9dXV4GhSb0'
 #TOKEN = input("Enter token: ").strip("\n")
 bot = telebot.TeleBot(TOKEN)
-apihelper.proxy = {'https':'socks5://dante:hrenota@31.14.131.25:7777'}
 
 # ai
 #from imageai.Detection import ObjectDetection
 import os, sys
 #import markovify
-sys.path.insert(1, './gpt2/src')
-from interactive_conditional_samples import run_model
+#sys.path.insert(1, './gpt2/src')
+#from interactive_conditional_samples import run_model
 #python src/interactive_conditional_samples.py 
 from threading import Thread
 
@@ -74,8 +73,8 @@ task = Task()
 #text_model = markovify.Text(text,state_size=2)
 
 #load gpt2 model
-tfsession, interact_model = run_model()
-print('gpt2 model is loaded')
+#tfsession, interact_model = run_model()
+#print('gpt2 model is loaded')
 
 execution_path = os.getcwd()
 
@@ -167,7 +166,7 @@ def dialogue_handler(message):
     
 
 
-#@bot.message_handler(content_types=['photo'])
+@bot.message_handler(content_types=['photo'])
 def handle_docs_photo(message): 
     try:
         chat_id = message.chat.id    
