@@ -23,7 +23,7 @@ class Game:
     
     def load_json(self, filename):
         lines = self.lines
-        with open(filename, "r") as jsondata:
+        with open(filename, "r", encoding='utf-8') as jsondata:
             data = json.load(jsondata)
         for d in data:
             ln = d["line"]
@@ -48,7 +48,7 @@ class Game:
         self.start_room = self.lines["1"]["Kropotkinskaya"]
 
     def load_text_objects(self, filename):
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding='utf-8') as f:
             while True:
                 l = f.readline()
                 if not l: 
@@ -61,7 +61,7 @@ class Game:
             self.tmp_objects.append({'image': os.path.join(filepath,img)})
     
     def load_names(self, filename):
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding='utf-8') as f:
             while True:
                 l = f.readline()
                 if not l: 

@@ -12,8 +12,9 @@ bot = telebot.TeleBot(TOKEN)
 import os, sys
 #import markovify
 #sys.path.insert(1, './gpt2/src')
-#from interactive_conditional_samples import run_model
-#python src/interactive_conditional_samples.py 
+sys.path.insert(1, './src/samples')
+from interactive_conditional_samples import run_model
+python3 src/samples/interactive_conditional_samples.py 
 from threading import Thread
 
 # game logic
