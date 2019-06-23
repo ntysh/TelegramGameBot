@@ -13,8 +13,8 @@ import os, sys
 #import markovify
 #sys.path.insert(1, './gpt2/src')
 sys.path.insert(1, './src/samples')
-from interactive_conditional_samples import run_model
-python3 src/samples/interactive_conditional_samples.py 
+from interactive_conditional import run_model
+#python interactive_conditional_samples.py 
 from threading import Thread
 
 # game logic
@@ -74,8 +74,8 @@ task = Task()
 #text_model = markovify.Text(text,state_size=2)
 
 #load gpt2 model
-#tfsession, interact_model = run_model()
-#print('gpt2 model is loaded')
+tfsession, interact_model = run_model()
+print('gpt2 model is loaded')
 
 execution_path = os.getcwd()
 

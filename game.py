@@ -1,7 +1,7 @@
 import json
 import random
 import os
-import Levenshtein as lev
+#import Levenshtein as lev
 
 def checkWordsInText(word_list, text):
     for w in word_list:
