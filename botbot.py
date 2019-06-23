@@ -11,9 +11,9 @@ bot = telebot.TeleBot(TOKEN)
 #from imageai.Detection import ObjectDetection
 import os, sys
 #import markovify
-#sys.path.insert(1, './gpt2/src')
-sys.path.insert(1, './src/samples')
-from interactive_conditional import run_model
+sys.path.insert(1, './gpt2/src')
+#sys.path.insert(1, './src/samples')
+from interactive_conditional_samples import run_model
 #python interactive_conditional_samples.py 
 from threading import Thread
 

@@ -129,7 +129,9 @@ class Game:
         if self.current_room.listTransfers():
             actions.append('Get list of transfers')
         if self.current_room.listObjects():
-            actions.append('Examine the objects')
+            actions.append('Examine the object')
+            actions.append('Destroy the object')
+            actions.append('Leave your object')
         if self.current_room.listNPC():
             for name in self.current_room.listNPC().keys():
                 actions.append('Talk to ' + name)
@@ -151,13 +153,13 @@ class Game:
             ans = "\n".join(self.current_room.line.listRooms().keys())
         elif action == 'Get list of transfers':
             ans = "\n".join(self.current_room.listTransfers().keys())
-        #elif action == 'Examine the objects':
-        #    ans = "You see " + ("these objects" if len(self.objects)>1 else "this object") + ":"
-        #    for obj in self.objects:
-        #        if "image" in obj.keys():
-        #            imgs.append(obj["image"])
-        #        elif "text" in obj.keys():
-        #            speechs.append(obj["text"])
+        elif action == 'Examine the objects':
+            ans = "You see " + ("these objects" if len(self.objects)>1 else "this object") + ":"
+            for obj in self.objects:
+                if "image" in obj.keys():
+                    imgs.append(obj["image"])
+                elif "text" in obj.keys():
+                    speechs.append(obj["text"])
         elif action.startswith(Game.acts["talk"]):
             name = action[len(Game.acts["talk"]):]
             npc = self.current_room.listNPC()[name]
