@@ -6,6 +6,7 @@ from telebot import apihelper, types
 TOKEN = '838747096:AAH1CHU_bdf-Lb8V_J18tt6ad9dXV4GhSb0'
 #TOKEN = input("Enter token: ").strip("\n")
 bot = telebot.TeleBot(TOKEN)
+apihelper.proxy = {'https':'socks5://dante:hrenota@31.14.131.25:7777'}
 
 # ai
 #from imageai.Detection import ObjectDetection
@@ -19,8 +20,13 @@ from threading import Thread
 
 # game logic
 import game
-
-games = {}
+g = game.g
+g.load_text_objects("artifacts.txt")
+g.load_img_objects("image_artifacts")
+g.load_json("stations.js")
+#lines = game.load_json("https://github.com/agershun/mosmetro/blob/master/step1/stations.js")
+g.load_names("names.txt")
+g.generate_npcs()
 
 def addButtons(*button_names):
     source_markup = types.ReplyKeyboardMarkup(row_width=3, resize_keyboard=True)
@@ -30,25 +36,9 @@ def addButtons(*button_names):
     return source_markup
 
 """
-source_markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-source_markup_btn1 = types.KeyboardButton('Park Kultury')
-source_markup_btn2 = types.KeyboardButton('Biblioteka imeni Lenina')
-source_markup.add(source_markup_btn1, source_markup_btn2)
-
-source_markup2 = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-source_markup2_btn1 = types.KeyboardButton('Stay at Kropotkinskaya')
-source_markup2_btn2 = types.KeyboardButton('Park Kultury')
-source_markup2_btn3 = types.KeyboardButton('Biblioteka imeni Lenina')
-source_markup2_btn4 = types.KeyboardButton('Examine the artifact')
-source_markup2.add(source_markup2_btn1, source_markup2_btn2, source_markup2_btn3, source_markup2_btn4)
-
-source_markup3 = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-source_markup3_btn1 = types.KeyboardButton('Read the newspapers')
-source_markup3_btn2 = types.KeyboardButton('Read the Soviet archives')
-source_markup3_btn3 = types.KeyboardButton('Discuss the stories with an odd visitor')
-source_markup3.add(source_markup3_btn1, source_markup3_btn2,source_markup3_btn3)
-
-
+'Read the newspapers')
+'Read the Soviet archives')
+'Discuss the stories with an odd visitor')
 
 class Task():
     isRunning = False
@@ -67,8 +57,8 @@ task = Task()
 #text_model = markovify.Text(text,state_size=2)
 
 #load gpt2 model
-tfsession, interact_model = run_model()
-print('gpt2 model is loaded')
+#tfsession, interact_model = run_model()
+#print('gpt2 model is loaded')
 
 execution_path = os.getcwd()
 
@@ -86,35 +76,26 @@ def continue_sentence(beginning):
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
 #   bot.reply_to(message, "You've been added to the Game. Send me your found objects to DEFINE or start a story.")
-   bot.reply_to(message, "You've been added to the Game. Type \"/metro\" to enter the underground.")
+   bot.reply_to(message, "You've been added to the Game, " + message.from_user.username + ". Type \"/metro\" to enter the underground.")
 
 @bot.message_handler(commands=['metro'])
 def start_handler(message):
-    g = game.Game()
-    g.load_text_objects("artifacts.txt")
-    g.load_img_objects("image_artifacts")
-    g.load_json("stations.js")
-    #lines = game.load_json("https://github.com/agershun/mosmetro/blob/master/step1/stations.js")
-    g.load_names("names.txt")
-    g.generate_npcs()
-    global games
-    games[message.chat.id] = g
-    ans = g.welcomeMessage()
+    p = game.Player(message.chat.id, message.from_user.username)
+    ans = p.welcome()
     bot.reply_to(message, ans)
-    ans = g.start()
-    msg = bot.send_message(message.chat.id, ans, reply_markup=addButtons(*g.getActions()))
+    ans = p.start()
+    msg = bot.send_message(message.chat.id, ans, reply_markup=addButtons(*p.getActions()))
     bot.register_next_step_handler(msg, gameHandler)
 
 def gameHandler(message):
     chat_id = message.chat.id
     text = message.text 
-    g = games[chat_id]
-    
+    p = g.players[chat_id]
     # getting game answer
-    ans, objects, speechs = g.makeAction(text)
+    ans, objects, speechs = p.makeAction(text)
                 
     # sending game answer
-    msg = bot.send_message(chat_id, ans, reply_markup=addButtons(*g.getActions()))
+    msg = bot.send_message(chat_id, ans, reply_markup=addButtons(*p.getActions()))
     for speech in speechs:
         #txt = "**"+speech[0]+"**"+": __"+speech[1]+"__"
         txt = "**{0}**: __{1}__".format(*speech)
@@ -129,7 +110,7 @@ def gameHandler(message):
             bot.send_message(chat_id, txt)
 
     # new step
-    if g.dialogue:
+    if p.dialogue:
         bot.register_next_step_handler(msg, dialogue_handler)
     else:
         bot.register_next_step_handler(msg, gameHandler)

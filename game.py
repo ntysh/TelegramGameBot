@@ -11,15 +11,13 @@ def checkWordsInText(word_list, text):
 
 class Game:
     def __init__(self):
-        self.player = Player()
-        self.current_room = None
+        self.players = {}
         self.start_room = None
         self.lines = {}
         self.stations = []
         self.tmp_objects = []
         self.tmp_names = []
         self.second_level = False
-        self.dialogue = False
     
     def load_json(self, filename):
         lines = self.lines
@@ -84,103 +82,11 @@ class Game:
     def load_NPCs(self, filename):
         ...
      #add NPCs to the corresponding stations with corresponding objects from json   
-        
-    def start(self):
-        return self.enterRoom(self.start_room)
-    
-    def enterRoom(self, room):
-        self.current_room = room
-        return self.current_room.get_description()
-    
-    def welcomeMessage(self):
-        return "You're exploring Moscow Metro system and its secrets. You can travel to any station on the current line or transfer to other lines on the hub stations. The artifacts that you\'re collecting can drive you even further."
-    
-    def wrongMessage(self):
-        return 'You can travel to any station on the current line or transfer to other lines on the hub stations.'
-    
-    def tryNextRoom(self, text):
-        w = checkWordsInText(self.current_room.keys(), text)
-        if w:
-            next_room = self.current_room[w]
-            return self.enterRoom(next_room)
-        else:
-            return None
             
-    def secondLevel(self):
-        com = self.player.isEnoughCommunication()
-        if com and not self.second_level:
-            library = Room("Russian State Library", Line("Library"))
-            self.lines["1"]["Biblioteka Imeni Lenina"].addTransfer(library)
-            #char = NPC("Solomon Nikritin", "avant-garde artist", "Projectionist, creator of Tectonics – organisational science.")
-            char = NPC("The Archivist", "AI", "The one who knows the stories")
-            char.addObject({"text": "What do you think about the Russian Kosmotechniks?"})
-            #char.addObject({"text": "It is abundantly clear that everything that surrounds us consists of bodies and phenomena, and all bodies and phenomena are learned by us in so far as we are able to distinguish them from everything other things, since they are a closed whole and at the same time consist of parts. It is in the binding, in the assembly of these parts into a closed whole (that is, in the assembly) and in the separation, in the disassembly of the closed assembly (that is, in dismantling) all conceivable work is manifested. It is necessary to find some closed figure, which, when dissected into many parts, would not lose its basic qualities, could become a necessary unit of measure and help solve the problems of Tectonics."})
-            library.addNPC(char)
-            self.second_level = True
-        return com
+    welcomeMessage = "You have entered the metro. We don't have to go out again. Come to your senses and don't start jumping, don't lose your mind and don't let out any dreams. When you start moving, remember: you should be moving at least to the end. You can travel to any station on the current line or to other lines on the hub stations. The artefacts that you're collecting can drive you even further."
     
-    acts = {'talk': 'Talk to ',
-            'info': 'Read the information',
-            'line': 'Get list of stations to go',
-            'trns': 'Get list of transfers'}
-    
-    def getActions(self):
-        actions = ['Read the information', 'Get list of stations to go']
-        if self.current_room.listTransfers():
-            actions.append('Get list of transfers')
-        if self.current_room.listObjects():
-            actions.append('Examine the object')
-            actions.append('Destroy the object')
-        if self.current_room.listNPC():
-            for name in self.current_room.listNPC().keys():
-                actions.append('Talk to ' + name)
-                actions.append('Make a gift')
-        if self.player.inventory:
-             actions.append('List objects collected')
-        if self.player.diary:
-             actions.append('List people met')
-        if self.secondLevel():
-            actions.append('Go to the Biblioteka Imeni Lenina')
-        return actions
-    
-    def makeAction(self, action):
-        ans = self.tryNextRoom(action)
-        objects = []
-        speechs = []
-        if action == 'Read the information':
-            ans = str(self.current_room.info)
-        elif action == 'Get list of stations to go':
-            ans = "\n".join(self.current_room.line.listRooms().keys())
-        elif action == 'Get list of transfers':
-            ans = "\n".join(self.current_room.listTransfers().keys())
-        #elif action == 'Examine the objects':
-        #    ans = "You see " + ("these objects" if len(self.objects)>1 else "this object") + ":"
-        #    for obj in self.objects:
-        #        if "image" in obj.keys():
-        #            imgs.append(obj["image"])
-        #        elif "text" in obj.keys():
-        #            speechs.append(obj["text"])
-        elif action.startswith(Game.acts["talk"]):
-            name = action[len(Game.acts["talk"]):]
-            npc = self.current_room.listNPC()[name]
-            ans = npc.getInfo()
-            speech, obj = npc.objectInfo()
-            if action == "Talk to The Archivist": self.dialogue = True
-            speechs.append((name, speech))
-            objects.append(obj)
-            self.player.diary.append(npc)
-            self.player.inventory.append(obj)
-
-        elif action == 'Make a gift':
-            ans = ''    
-        elif action == 'List objects collected':
-            ans = "You found these objects while exploring the Metro:"
-            imgs = [z["image"] for z in self.player.inventory]
-        elif action == 'List people met':
-            ans = "You met these people on your way: \n" + '\n'.join([z.name + ' ' + z.npc_class for z in self.player.diary])
-        if not ans: ans = self.wrongMessage()
-        return (ans, objects, speechs)
-
+    def wrongMessage(self): 
+        return "You can travel to any station on the current line or transfer to other lines on the hub stations."
  
 
 class Line:
@@ -224,6 +130,7 @@ class Room:
             
     def listObjects(self):
         return self.objects
+    
         
     def listNPC(self):
         return {p.name:p for p in self.npcs}
@@ -282,26 +189,147 @@ class NPC:
         #info = NPC.classes[self.npc_class]
         return welcome #+ " " + info
     
-    def objectInfo(self):
+    def speech(self):
         text = "\"I have something for you.\"" if self.objects else "I don't have anything for you."
-        return (text, self.objects[-1] if self.objects else None)
+        return text
     
     def addObject(self, obj):
         self.objects.append(obj)
     
     def takeLastObject(self):
         return self.objects.pop(-1)
-    
+
+g = Game()
+
 class Player:
-    def __init__(self):
+    def __init__(self, cid, name):
         self.inventory = []
         self.diary = []
+        self.current_room = None
+        global g
+        g.players[cid] = self
+        self.dialogue = False
+        self.name = name
     
     def addObjectFromNPC(self, obj, npc):
         self.inventory.append(obj)
         self.diary.append(npc)
     
+    def welcome(self):
+        return Game.welcomeMessage
+    
+    def start(self):
+        return self.enterRoom(g.start_room)
+    
+    def enterRoom(self, room):
+        self.current_room = room
+        return self.current_room.get_description()
+
+    def tryNextRoom(self, text):
+        w = checkWordsInText(self.current_room.keys(), text)
+        if w:
+            next_room = self.current_room[w]
+            return self.enterRoom(next_room)
+        else:
+            return None
+    
     def isEnoughCommunication(self):
         #return True
         return len(self.diary) >= 2
+    
+    def secondLevel(self):
+        com = self.isEnoughCommunication()
+        if com and not self.second_level:
+            library = Room("Russian State Library", Line("Library"))
+            g.lines["1"]["Biblioteka Imeni Lenina"].addTransfer(library)
+            #char = NPC("Solomon Nikritin", "avant-garde artist", "Projectionist, creator of Tectonics – organisational science.")
+            char = NPC("The Archivist", "AI", "The one who knows the stories")
+            char.addObject({"text": "What do you think about the Russian Kosmotechniks?"})
+            #char.addObject({"text": "It is abundantly clear that everything that surrounds us consists of bodies and phenomena, and all bodies and phenomena are learned by us in so far as we are able to distinguish them from everything other things, since they are a closed whole and at the same time consist of parts. It is in the binding, in the assembly of these parts into a closed whole (that is, in the assembly) and in the separation, in the disassembly of the closed assembly (that is, in dismantling) all conceivable work is manifested. It is necessary to find some closed figure, which, when dissected into many parts, would not lose its basic qualities, could become a necessary unit of measure and help solve the problems of Tectonics."})
+            library.addNPC(char)
+            g.second_level = True
+        return com
+    
+    acts = {'talk': 'Talk to ',
+            'info': 'Read the information',
+            'line': 'Get list of stations to go',
+            'trns': 'Get list of transfers',
+            'take': 'Take object from ',
+            'invt': 'List objects collected',
+            'diar': 'List people met',
+            'exmn': 'Examine the objects',
+            'drop': 'Drop an object',
+            'drpp': 'Drop '}
+    
+    def getActions(self):
+        actions = [Player.acts['info'], Player.acts['line']]
+        if self.current_room.listTransfers():
+            actions.append(Player.acts['trns'])
+        for obj in self.current_room.listObjects():
+            actions.append(Player.acts['exmn'])
+            #actions.append('Destroy the object ' + obj.name)
+        if self.current_room.listNPC():
+            for npc in self.current_room.listNPC().values():
+                actions.append(Player.acts['talk'] + npc.name)
+                if npc.objects: actions.append(Player.acts['take'] + npc.name)
+                #actions.append('Make a gift')
+        if self.inventory:
+             actions.append(Player.acts['invt'])
+             actions.append(Player.acts['drop'])
+        if self.diary:
+             actions.append(Player.acts['diar'])
+        if self.secondLevel():
+            actions.append('Go to the Biblioteka Imeni Lenina')
+        return actions
+    
+    def makeAction(self, action):
+        ans = self.tryNextRoom(action)
+        objects, speechs = [], []
+        if action == 'Read the information':
+            ans = str(self.current_room.info)
+        elif action == 'Get list of stations to go':
+            ans = "\n".join(self.current_room.line.listRooms().keys())
+        elif action == 'Get list of transfers':
+            ans = "\n".join(self.current_room.listTransfers().keys())
+        #elif action == 'Examine the objects':
+        #    ans = "You see " + ("these objects" if len(self.objects)>1 else "this object") + ":"
+        #    for obj in self.objects:
+        #        if "image" in obj.keys():
+        #            imgs.append(obj["image"])
+        #        elif "text" in obj.keys():
+        #            speechs.append(obj["text"])
+        elif action.startswith(Player.acts["talk"]):
+            if action == "Talk to The Archivist": self.dialogue = True
+            name = action[len(Player.acts["talk"]):]
+            npc = self.current_room.listNPC()[name]
+            ans = npc.getInfo()
+            if npc not in self.diary: self.diary.append(npc)
+            speechs.append((npc.name,npc.speech()))
+        elif action.startswith(Player.acts['take']):
+            name = action[len(Player.acts["take"]):]
+            npc = self.current_room.listNPC()[name]
+            obj = npc.takeLastObject()
+            objects.append(obj)
+            if obj not in self.inventory: self.inventory.append(obj)
+            ans = npc.name + ' gave you a piece of map'
+            npc.objects = []
+        #elif action == 'Make a gift':
+        #    ans = ''
+        elif action == Player.acts['invt']:
+            ans = "You found these objects while exploring the Metro:"
+            imgs = [z["image"] for z in self.inventory]
+        elif action == Player.acts['drop']:
+            ans = 'Type "Drop <object_number>" for droping'
+        elif action.startswith(Player.acts['drpp']):
+            obj_n = action[len(Player.acts['drpp']):]
+            if obj_n > len(self.inventory):
+                ans = "You dont have this object!"
+            else:
+                self.current_room.addObject(self.inventory.pop(obj_n+1))
+                ans = "You succesfully dropped this object"
+        elif action == Player.acts['diar']:
+            ans = "You met these people on your way: \n" + '\n'.join([z.name + ' ' + z.npc_class for z in self.diary])
+        else:
+            if not ans: ans = g.wrongMessage()
+        return (ans, objects, speechs)
     
