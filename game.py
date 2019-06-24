@@ -112,7 +112,7 @@ class Game:
             library = Room("Russian State Library", Line("Library"))
             self.lines["1"]["Biblioteka Imeni Lenina"].addTransfer(library)
             #char = NPC("Solomon Nikritin", "avant-garde artist", "Projectionist, creator of Tectonics – organisational science.")
-            char = NPC("The Archivist", "AI", "Embodied mind.")
+            char = NPC("The Archivist", "AI", "The one who knows the stories")
             char.addObject({"text": "What do you think about the Russian Kosmotechniks?"})
             #char.addObject({"text": "It is abundantly clear that everything that surrounds us consists of bodies and phenomena, and all bodies and phenomena are learned by us in so far as we are able to distinguish them from everything other things, since they are a closed whole and at the same time consist of parts. It is in the binding, in the assembly of these parts into a closed whole (that is, in the assembly) and in the separation, in the disassembly of the closed assembly (that is, in dismantling) all conceivable work is manifested. It is necessary to find some closed figure, which, when dissected into many parts, would not lose its basic qualities, could become a necessary unit of measure and help solve the problems of Tectonics."})
             library.addNPC(char)
@@ -131,10 +131,10 @@ class Game:
         if self.current_room.listObjects():
             actions.append('Examine the object')
             actions.append('Destroy the object')
-            actions.append('Leave your object')
         if self.current_room.listNPC():
             for name in self.current_room.listNPC().keys():
                 actions.append('Talk to ' + name)
+                actions.append('Make a gift')
         if self.player.inventory:
              actions.append('List objects collected')
         if self.player.diary:
@@ -153,13 +153,13 @@ class Game:
             ans = "\n".join(self.current_room.line.listRooms().keys())
         elif action == 'Get list of transfers':
             ans = "\n".join(self.current_room.listTransfers().keys())
-        elif action == 'Examine the objects':
-            ans = "You see " + ("these objects" if len(self.objects)>1 else "this object") + ":"
-            for obj in self.objects:
-                if "image" in obj.keys():
-                    imgs.append(obj["image"])
-                elif "text" in obj.keys():
-                    speechs.append(obj["text"])
+        #elif action == 'Examine the objects':
+        #    ans = "You see " + ("these objects" if len(self.objects)>1 else "this object") + ":"
+        #    for obj in self.objects:
+        #        if "image" in obj.keys():
+        #            imgs.append(obj["image"])
+        #        elif "text" in obj.keys():
+        #            speechs.append(obj["text"])
         elif action.startswith(Game.acts["talk"]):
             name = action[len(Game.acts["talk"]):]
             npc = self.current_room.listNPC()[name]
@@ -171,7 +171,8 @@ class Game:
             self.player.diary.append(npc)
             self.player.inventory.append(obj)
 
-            
+        elif action == 'Make a gift':
+            ans = ''    
         elif action == 'List objects collected':
             ans = "You found these objects while exploring the Metro:"
             imgs = [z["image"] for z in self.player.inventory]

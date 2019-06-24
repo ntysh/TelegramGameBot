@@ -20,14 +20,7 @@ from threading import Thread
 # game logic
 import game
 
-g = game.Game()
-g.load_text_objects("artifacts.txt")
-g.load_img_objects("image_artifacts")
-g.load_json("stations.js")
-#lines = game.load_json("https://github.com/agershun/mosmetro/blob/master/step1/stations.js")
-g.load_names("names.txt")
-g.generate_npcs()
-
+games = {}
 
 def addButtons(*button_names):
     source_markup = types.ReplyKeyboardMarkup(row_width=3, resize_keyboard=True)
@@ -97,6 +90,15 @@ def send_welcome(message):
 
 @bot.message_handler(commands=['metro'])
 def start_handler(message):
+	g = game.Game()
+	g.load_text_objects("artifacts.txt")
+	g.load_img_objects("image_artifacts")
+	g.load_json("stations.js")
+	#lines = game.load_json("https://github.com/agershun/mosmetro/blob/master/step1/stations.js")
+	g.load_names("names.txt")
+	g.generate_npcs()
+	global games
+	games[message.chat.id] = g
     ans = g.welcomeMessage()
     bot.reply_to(message, ans)
     ans = g.start()
@@ -106,6 +108,7 @@ def start_handler(message):
 def gameHandler(message):
     chat_id = message.chat.id
     text = message.text 
+    g = games[chat_id]
     
     # getting game answer
     ans, objects, speechs = g.makeAction(text)
