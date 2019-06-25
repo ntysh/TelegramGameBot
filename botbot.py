@@ -26,7 +26,8 @@ g.load_img_objects("image_artifacts")
 g.load_json("stations.js")
 #lines = game.load_json("https://github.com/agershun/mosmetro/blob/master/step1/stations.js")
 g.load_names("names.txt")
-g.generate_npcs()
+#g.generate_npcs()
+g.state_npcs()
 
 def addButtons(*button_names):
     source_markup = types.ReplyKeyboardMarkup(row_width=3, resize_keyboard=True)
@@ -98,7 +99,7 @@ def gameHandler(message):
     msg = bot.send_message(chat_id, ans, reply_markup=addButtons(*p.getActions()))
     for speech in speechs:
         #txt = "**"+speech[0]+"**"+": __"+speech[1]+"__"
-        txt = "**{0}**: __{1}__".format(*speech)
+        txt = "__{1}__".format(*speech)
         bot.send_message(chat_id, txt, parse_mode="markdown")
     for obj in objects:
         if 'image' in obj.keys():
@@ -110,8 +111,10 @@ def gameHandler(message):
             bot.send_message(chat_id, txt)
 
     # new step
-    if p.dialogue:
-        bot.register_next_step_handler(msg, dialogue_handler)
+    #if p.dialogue:
+    #    bot.register_next_step_handler(msg, dialogue_handler)
+    if p.receivingPhoto:
+        bot.register_next_step_handler(msg, handle_game_pics)
     else:
         bot.register_next_step_handler(msg, gameHandler)
 
@@ -152,6 +155,23 @@ def dialogue_handler(message):
 
 
 @bot.message_handler(content_types=['photo'])
+def handle_game_pics(message): 
+    chat_id = message.chat.id    
+    print ('message.photo =', message.photo)
+    file_info = bot.get_file(message.photo[-1].file_id)
+
+    imagepath = os.path.join(execution_path , file_info.file_path)
+    print ('file.file_path =', file_info.file_path)
+    downloaded_file = bot.download_file(file_info.file_path)
+    with open(imagepath, 'wb') as new_file:
+        new_file.write(downloaded_file)
+    p = g.players[chat_id]
+    p.current_room.npcs[0].addObject({'image': imagepath})
+    msg = bot.send_message(chat_id, "Thank you! I\'ll give to the next one.")
+    p.receivingPhoto = False
+    bot.register_next_step_handler(msg, gameHandler)
+
+#@bot.message_handler(content_types=['photo'])
 def handle_docs_photo(message): 
     try:
         chat_id = message.chat.id    
