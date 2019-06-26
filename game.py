@@ -90,7 +90,7 @@ class Game:
         ...
      #add NPCs to the corresponding stations with corresponding objects from json   
             
-    welcomeMessage = "You have entered the metro. We don't have to go out again. Come to your senses and don't start jumping, don't lose your mind and don't let out any dreams. When you start moving, remember: you should be moving at least to the end. You can travel to any station on the current line or to other lines on the hub stations. The artefacts that you're collecting can drive you even further."
+    welcomeMessage = "You have entered the metro. We don't have to go out again. Come to your senses and don't start jumping, don't lose your mind and don't let out any dreams. When you start moving, remember: you should be moving at least to the end. You can travel to any station on the current line or to other lines on the hub stations. The artefacts that you're collecting can drive you even further. You have to the investigate rumours about that secret underground network - a 'gogol-sized' Metro-2. ."
     
     def wrongMessage(self): 
         return "You can travel to any station on the current line or transfer to other lines on the hub stations."
@@ -166,10 +166,10 @@ class Room:
 
 class Station(Room):
     def get_description(self):
-        d = "You\'re at " + self.name + " metro station. You see an information stand" +\
+        d = "You\'re at " + self.name + ". You see an information stand" +\
         (" and some artifact" if self.objects else "") +\
         (" and person" if self.npcs else "") +\
-        ". Stay to examine or go to the neighbour stations."
+        ". Stay here or go to the neighbour stations."
         return d
     
 class Station2(Station):
@@ -193,12 +193,12 @@ class NPC:
         self.givingObject = False
     
     def getInfo(self):
-        welcome = "You met " + self.npc_class + " " + self.name + ". Known as " + self.info 
+        welcome = "You met " + self.info + " " + self.name + ". He was the " + self.npc_class  
         #info = NPC.classes[self.npc_class]
         return welcome #+ " " + info
     
     def speech(self):
-        text = "\"I have something for you.\"" if self.objects else "I don't have anything for you."
+        text = "He starts talking about that Metro-2 again – the part of the secret underground network, still used by FSB to move like moles beneath the city. He winks, hinting that he can give you something." if self.objects else "He doesn't have anything for you."
         return text
     
     def addObject(self, obj):
@@ -252,13 +252,16 @@ class Player:
     def secondLevel(self):
         com = self.isEnoughCommunication()
         if com and not g.second_level:
-            library = Room("Russian State Library", Line("Library"))
+            g.load_json('weird_stations.js')
+            library = Room("Russian State Library", g.lines["Library"])
+            library.info = "You\'re at the Russian state library – former Lenin library. There are some secrets in Moscow Metro. You can do a research here and go much further visible structures of the knowledge."
             g.lines["1"]["Biblioteka Imeni Lenina"].addTransfer(library)
-            char = NPC("The Archivist", "AI", "The one who knows the stories")
-            char.addObject({"text": "What do you think about the Russian Kosmotechniks?"})
+            char = NPC("The Archivist", "AI", "The one who knows the stories. You can talk to him to know more about Metro-2, presumably that level of Moscow life where you navigate now.")
+            char.addObject({"text": "I can share with you my knowledge, but first you tell me what you heard about this underground Moscow life."})
             #char.addObject({"text": "It is abundantly clear that everything that surrounds us consists of bodies and phenomena, and all bodies and phenomena are learned by us in so far as we are able to distinguish them from everything other things, since they are a closed whole and at the same time consist of parts. It is in the binding, in the assembly of these parts into a closed whole (that is, in the assembly) and in the separation, in the disassembly of the closed assembly (that is, in dismantling) all conceivable work is manifested. It is necessary to find some closed figure, which, when dissected into many parts, would not lose its basic qualities, could become a necessary unit of measure and help solve the problems of Tectonics."})
             library.addNPC(char)
-            g.load_json('weird_stations.js')
+            
+            #g.lines["Library"]["Russian State Library"].addTransfer(g.lines["Library"]["visitor lounge"])
             g.second_level = True
             
         return com
@@ -285,9 +288,9 @@ class Player:
             for npc in self.current_room.listNPC().values():
                 actions.append(Player.acts['talk'] + npc.name)
                 if npc.isGivingObject(): 
-                    actions.append('Make a gift')
                     actions.append(Player.acts['take'] + npc.name)
-                    
+                if not npc.objects:
+                    actions.append('Ask to hold an object')
         if self.inventory:
              actions.append(Player.acts['invt'])
              actions.append(Player.acts['drop'])
@@ -327,25 +330,30 @@ class Player:
             obj = npc.takeLastObject()
             objects.append(obj)
             if obj not in self.inventory: self.inventory.append(obj)
-            ans = npc.name + ' gave you a piece of map'
+            ans = 'He gave you this object'
             npc.objects = []
-        elif action == 'Make a gift':
-            ans = "Send me a photo to place it here"
+        elif action == 'Ask to hold an object':
+            ans = "Send me a picture so I save it for other people"
             self.receivingPhoto = True
         elif action == Player.acts['invt']:
             ans = "You found these objects while exploring the Metro:"
-            imgs = [z["image"] for z in self.inventory]
+            objects = self.inventory
         elif action == Player.acts['drop']:
-            ans = 'Type "Drop <object_number>" for droping'
+            ans = 'Type "Drop" and the object\'s number for droping'
         elif action.startswith(Player.acts['drpp']):
             obj_n = int(action[len(Player.acts['drpp']):])
             if obj_n > len(self.inventory):
                 ans = "You dont have this object!"
             else:
-                self.current_room.addObject(self.inventory.pop(obj_n))
+                self.current_room.addObject(self.inventory.pop(obj_n-1))
                 ans = "You succesfully dropped this object"
         elif action == Player.acts['diar']:
             ans = "You met these people on your way: \n" + '\n'.join([z.name + ' ' + z.npc_class for z in self.diary])
+        elif action == 'Go to the Biblioteka Imeni Lenina':
+            ans = "You came to the Biblioteka Imeni Lenina metro station, but now you see an inconspicuous way out leading to the labyrinths inside the library. Although the library is not part of the metro, but judging by the maps, it is directly connected with it. Check the new transfer available."
+        elif 'Russian State Library' in action:
+            ans = "Suddenly the silence was broken. What is this? Electricity tickled through, strange noises appear and disappear. I started to think. Where it come from? And why? And why? You don’t need to do anything. It isn’t necessary to worry. I need to speak to somebody, to find a way… Too many questions. Too much of everything, I need to start moving if take into account the mental state.  Lines of flight: moving backwards, forwards and back. We arrive at Metro-2; The Neglinnaya River; The city beneath the city. There is no need of a ticket.."
+
         else:
             if not ans: ans = g.wrongMessage()
         return (ans, objects, speechs)

@@ -22,7 +22,7 @@ from threading import Thread
 import game
 g = game.g
 g.load_text_objects("artifacts.txt")
-g.load_img_objects("image_artifacts")
+g.load_img_objects("metro_images")
 g.load_json("stations.js")
 #lines = game.load_json("https://github.com/agershun/mosmetro/blob/master/step1/stations.js")
 g.load_names("names.txt")
@@ -58,8 +58,8 @@ task = Task()
 #text_model = markovify.Text(text,state_size=2)
 
 #load gpt2 model
-#tfsession, interact_model = run_model()
-#print('gpt2 model is loaded')
+tfsession, interact_model = run_model()
+print('gpt2 model is loaded')
 
 execution_path = os.getcwd()
 
@@ -105,14 +105,16 @@ def gameHandler(message):
         if 'image' in obj.keys():
             img = obj['image']
             with open(img, "rb") as img_bin:
+                #hotfix
+                if not p.isEnoughCommunication: bot.send_message(chat_id, 'It seems it\'s only a part of a map. More probably exist down here. If you can\'t find them, try ask other players.')
                 bot.send_photo(chat_id, img_bin)
         if 'text' in obj.keys():
             txt = obj['text']
             bot.send_message(chat_id, txt)
 
-    # new step
-    #if p.dialogue:
-    #    bot.register_next_step_handler(msg, dialogue_handler)
+     #new step
+    if p.dialogue:
+        bot.register_next_step_handler(msg, dialogue_handler)
     if p.receivingPhoto:
         bot.register_next_step_handler(msg, handle_game_pics)
     else:
