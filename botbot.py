@@ -19,8 +19,8 @@ from interactive_conditional_samples import run_model
 from threading import Thread
 
 # game logic
-import game
-g = game.g
+import presentation
+g = presentation.g
 g.load_text_objects("artifacts.txt")
 g.load_img_objects("metro_images")
 g.load_json("stations.js")
@@ -77,13 +77,16 @@ def continue_sentence(beginning):
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
 #   bot.reply_to(message, "You've been added to the Game. Send me your found objects to DEFINE or start a story.")
-   bot.reply_to(message, "You've been added to the Game, " + message.from_user.username + ". Type \"/metro\" to enter the underground.")
+   bot.reply_to(message, "You're proceeding the game, " + message.from_user.username + ". Type \"/inventory\" to see what you collected.")
 
-@bot.message_handler(commands=['metro'])
+@bot.message_handler(commands=['inventory'])
 def start_handler(message):
-    p = game.Player(message.chat.id, message.from_user.username)
-    ans = p.welcome()
-    bot.reply_to(message, ans)
+    chat_id = message.chat.id
+    p = presentation.Player(message.chat.id, message.from_user.username)
+    bot.reply_to(message, "You have one artifact:")
+    with open("map.jpg", "rb") as img_bin: bot.send_photo(chat_id, img_bin)
+    bot.send_message(message.chat.id,"You've successfully combined the parts to get the map.")
+    bot.send_message(message.chat.id,"It seems all the lines are intersecting at the Biblioteka Imeni Lenina station. Let's go there.")
     ans = p.start()
     msg = bot.send_message(message.chat.id, ans, reply_markup=addButtons(*p.getActions()))
     bot.register_next_step_handler(msg, gameHandler)
